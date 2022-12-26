@@ -35,3 +35,9 @@ pub fn coord_transform(
     res
     
 }
+
+pub fn squeeze_header(header: &NiftiHeader) -> NiftiHeader {
+    let mut new_header = header.clone();
+    new_header
+}
+

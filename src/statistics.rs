@@ -11,6 +11,8 @@ use nifti::{
 };
 use log::{info, warn};
 
+use crate::image::squeeze_header;
+
 pub fn voxelwise_tsnr(
     input_nifti: String,
     output_nifti: String
@@ -43,11 +45,19 @@ pub fn voxelwise_tsnr(
     info!("{:?}", std_img.shape());
     
     info!("Calculating tSNR...");
+    let tsnr_img = mean_img / std_img;
     
-    
-    info!("Updating header...");  
+    let updated_header = squeeze_header(&header);
     
     info!("Saving tSNR NIfTI image at {}", output_nifti);
-    
+    match WriterOptions::new(output_nifti).reference_header(
+        &updated_header
+    ).write_nifti(&tsnr_img) {
+        Ok(()) => {}
+        Err(e) => {
+            panic!("Error: {}", e);
+        }
+    }
+        
     Ok(())
 }
