@@ -32,7 +32,7 @@ Options:
 ```
 
 To further look up specific commands, you can run `--help` for each command.
-For example, `nirust mask-hemi` results in:
+For example, `nirust mask-hemi --help` results in:
 
 ```
 Mask the left or right hemisphere of the nifti image
