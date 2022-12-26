@@ -1,0 +1,13 @@
+[package]
+name = "nirust"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+nifti = { version = "0.15.0", features = ["ndarray_volumes"]}
+ndarray = "0.15.6"
+log = { version = "0.4", features = ["kv_unstable"]}
+simple_logger = "4.0.0"
+clap = { version = "4.0.29", features = ["derive"]}
