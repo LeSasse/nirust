@@ -3,6 +3,7 @@
 mod image;
 mod args;
 mod masking;
+mod statistics;
 
 // rust or third party modules
 use clap::Parser;
@@ -12,14 +13,10 @@ use log::info;
 // own modules
 use args::{
     NirustArgs,
+    ActionType,
     MaskHemiCommand,
-    ActionType
+    TemporalSNRCommand,
 };
-//use masking;
-
-// fn no_valid_command() -> Result<(), NiftiError>{
-//     panic!("No valid command found.");
-// }
 
 fn main() {
     simple_logger::SimpleLogger::new().env().init().unwrap();
@@ -34,6 +31,16 @@ fn main() {
                 Ok(()) => {},
                 Err(e) => {
                     panic!("Error: {}", e);
+                }
+            }
+        },
+        ActionType::TemporalSNR(
+            TemporalSNRCommand { input_nifti, output_nifti }
+        ) => {
+            match statistics::voxelwise_tsnr(input_nifti, output_nifti) {
+                Ok(()) => {},
+                Err(e) => {
+                    panic!("{}", e)
                 }
             }
         }
