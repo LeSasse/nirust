@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 nifti = { version = "0.15.0", features = ["ndarray_volumes"]}
 ndarray = "0.15.6"
+ndarray-stats = "0.5.1"
 log = { version = "0.4", features = ["kv_unstable"]}
 simple_logger = "4.0.0"
 clap = { version = "4.0.29", features = ["derive"]}
