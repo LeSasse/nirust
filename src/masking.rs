@@ -1,15 +1,8 @@
 
 
 use ndarray::prelude::*;
+use nifti::NiftiHeader;
 use std::f32::NAN;
-use nifti::{
-    writer::WriterOptions,
-    error::NiftiError,
-    NiftiObject,
-    ReaderOptions,
-    NiftiVolume,
-    IntoNdArray
-};
 use log::{info, warn};
 
 use crate::image::{get_affine, coord_transform};
@@ -33,63 +26,44 @@ fn _find_x_origin(n_x: i32, affine: &Array2<f32>) -> f32 {
 }
 
 pub fn mask_hemi (
-    input_nifti: String,
-    output_nifti: String,
+    header: &NiftiHeader,
+    image_data: Array<f32, IxDyn>,
     side: &str
-) -> Result<(), NiftiError> {
+) -> Array<f32, IxDyn> {
 
-    match side {
-        "left"  => info!("Masking left hemisphere..."),
-        "right" => info!("Masking right hemisphere ..."),
-        _ => panic!("Error: 'side' parameter can be 'left' or 'right'!")
-    }
-    
-    info!("Reading NIfTI at {}", input_nifti);
-    let img = ReaderOptions::new().read_file(input_nifti)?;
-    
-    let header = img.header().clone();
-    let volume = img.volume();
-    let dims = volume.dim();
+    let dims = image_data.shape();
     let n_dims = dims.len();
-    info!("Dimensions detected: {:?}", n_dims);    
-
     let affine = get_affine(&header);    
     // how many slices are there in the x direction?
-    let n_x = dims[0];
+    let n_x = dims[0] as i32;
     // left of origin (i.e. negative real-world coordinates are 'left')
-    let x_origin = _find_x_origin(n_x.into(), &affine);
-    let mut image_data = img.into_volume().into_ndarray::<f32>().unwrap();
-    info!("image dimensions are {:?}", image_data.shape());
-        
-    let n_x = n_x as i32;
+    let x_origin = _find_x_origin(n_x, &affine);
+    info!("image dimensions are {:?}", &dims);
+
     let x_origin = x_origin as i32;
-        
+    
+    // this is not efficient, but I do not want to do inplace operations with
+    // user provided data
+    let mut image_data_clone = image_data.clone();
+    
     // Slice according to side parameter and n of dimensions
     // TODO: This feels like code duplication and unnecessary ifs,
     // but not sure how to do this better using rust + ndarray
-    
-    if n_dims == 3 {
-        if side == "left" {
-            image_data.slice_mut(s![0..x_origin, .., ..]).fill(NAN);
-        } else if side == "right" {
-            image_data.slice_mut(s![x_origin..n_x, .., ..]).fill(NAN);
+    if side == "left" {
+        if n_dims == 3 {
+            image_data_clone.slice_mut(s![0..x_origin, .., ..]).fill(NAN);
+        } else if n_dims == 4 {
+            image_data_clone.slice_mut(s![0..x_origin, .., .., ..]).fill(NAN);
         }
-    } else if n_dims == 4 {   
-        if side == "left" {
-            image_data.slice_mut(s![0..x_origin, .., .., ..]).fill(NAN);
-        } else if side == "right" {
-            image_data.slice_mut(s![x_origin..n_x, .., .., ..]).fill(NAN);
+    } else if side == "right" {   
+        if n_dims == 3 {
+            image_data_clone.slice_mut(s![x_origin..n_x, .., ..]).fill(NAN);
+        } else if n_dims == 4 {
+            image_data_clone.slice_mut(s![x_origin..n_x, .., .., ..]).fill(NAN);
         }
+    } else {
+        panic!("Error: 'side' parameter can be 'left' or 'right'!");
     }
-    
-    match WriterOptions::new(output_nifti).reference_header(
-        &header
-    ).write_nifti(&image_data) {
-        Ok(()) => {}
-        Err(e) => {
-            panic!("Error: {}", e);
-        }
-    }
-    Ok(())
+    image_data_clone
 }
 

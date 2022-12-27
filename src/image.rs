@@ -1,8 +1,55 @@
 
 use ndarray::prelude::*;
-use nifti::{NiftiHeader};
+
+use nifti::{
+    IntoNdArray,
+    NiftiObject,
+    NiftiVolume,
+    ReaderOptions, 
+    writer::WriterOptions,
+    NiftiHeader
+};
+
+use std::path::Path;
+use log::info;
+
+
+pub fn load_img(
+    path: &Path
+) -> (NiftiHeader, Array<f32, IxDyn>) {
+    
+    info!("Reading NIfTI at {:?}", path);
+    let img = match ReaderOptions::new().read_file(path) {
+        Ok(img) => img,
+        Err(e) => panic!("Error: {}", e)
+    };
+    let header = img.header().clone();
+    let volume = img.volume();
+    let dims = volume.dim();
+    let n_dims = dims.len();
+    info!("Dimensions detected: {:?}", n_dims);
+    info!("Consuming data...");
+    let image_data = img.into_volume().into_ndarray::<f32>().unwrap();
+
+    (header, image_data)
+}
+
+pub fn save_img(
+    path: &Path,
+    header: &NiftiHeader,
+    image_data: Array<f32, IxDyn>
+) {
+    
+    match WriterOptions::new(path)
+        .reference_header(&header)
+        .write_nifti(&image_data) {
+            Ok(()) => {}
+            Err(e) => {panic!("Error: {}", e)}
+    }
+}
 
 pub fn get_affine(header: &NiftiHeader) -> Array2<f32> {
+    
     arr2(
         &[
             header.srow_x,
@@ -34,10 +81,5 @@ pub fn coord_transform(
     let res = (world_x, world_y, world_z);
     res
     
-}
-
-pub fn squeeze_header(header: &NiftiHeader) -> NiftiHeader {
-    let mut new_header = header.clone();
-    new_header
 }
 
