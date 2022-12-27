@@ -25,11 +25,12 @@ fn _find_x_origin(n_x: i32, affine: &Array2<f32>) -> f32 {
     n_x as f32
 }
 
-pub fn mask_hemi (
+pub fn mask_hemi(
     header: &NiftiHeader,
-    image_data: Array<f32, IxDyn>,
+    image_data: &mut Array<f32, IxDyn>,
     side: &str
-) -> Array<f32, IxDyn> {
+) {
+//) -> &'a mut Array<f32, IxDyn> {
 
     let dims = image_data.shape();
     let n_dims = dims.len();
@@ -44,26 +45,24 @@ pub fn mask_hemi (
     
     // this is not efficient, but I do not want to do inplace operations with
     // user provided data
-    let mut image_data_clone = image_data.clone();
     
     // Slice according to side parameter and n of dimensions
     // TODO: This feels like code duplication and unnecessary ifs,
     // but not sure how to do this better using rust + ndarray
     if side == "left" {
         if n_dims == 3 {
-            image_data_clone.slice_mut(s![0..x_origin, .., ..]).fill(NAN);
+            image_data.slice_mut(s![0..x_origin, .., ..]).fill(NAN);
         } else if n_dims == 4 {
-            image_data_clone.slice_mut(s![0..x_origin, .., .., ..]).fill(NAN);
+            image_data.slice_mut(s![0..x_origin, .., .., ..]).fill(NAN);
         }
     } else if side == "right" {   
         if n_dims == 3 {
-            image_data_clone.slice_mut(s![x_origin..n_x, .., ..]).fill(NAN);
+            image_data.slice_mut(s![x_origin..n_x, .., ..]).fill(NAN);
         } else if n_dims == 4 {
-            image_data_clone.slice_mut(s![x_origin..n_x, .., .., ..]).fill(NAN);
+            image_data.slice_mut(s![x_origin..n_x, .., .., ..]).fill(NAN);
         }
     } else {
         panic!("Error: 'side' parameter can be 'left' or 'right'!");
     }
-    image_data_clone
 }
 

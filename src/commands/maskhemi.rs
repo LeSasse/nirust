@@ -31,10 +31,10 @@ impl ExecutableCommand for MaskHemiCommand {
 
         info!("Running mask-hemi command...");        
         // function that loads image and returns header and ndarray
-        let (header, image_data) = load_img(Path::new(&self.input_nifti));
+        let (header, mut image_data) = load_img(Path::new(&self.input_nifti));
                 
         // function that does masking and returns header and ndarray
-        let image_data = mask_hemi(&header, image_data, &self.side);
+        mask_hemi(&header, &mut image_data, &self.side);
    
         // function that saves header and ndarray to a nifti
         save_img(Path::new(&self.output_nifti), &header, image_data);
