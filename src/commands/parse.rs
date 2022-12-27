@@ -25,6 +25,6 @@ pub enum ActionType {
     /// Mask the left or right hemisphere of a NIfTI image.
     MaskHemi(MaskHemiCommand),
     
-    // Compute the voxel-wise temporal SNR of a 4D NIfTI image.
+    /// Compute the voxel-wise temporal SNR of a 4D NIfTI image.
     TemporalSNR(TemporalSNRCommand),   
 }

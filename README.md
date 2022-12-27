@@ -23,12 +23,13 @@ Nirust consists of a collection of commands, which you can look up by running
 Usage: nirust <COMMAND>
 
 Commands:
-  mask-hemi  Mask the left or right hemisphere of the nifti image
-  help       Print this message or the help of the given subcommand(s)
+  mask-hemi     Mask the left or right hemisphere of a NIfTI image
+  temporal-snr  Compute the voxel-wise temporal SNR of a 4D NIfTI image
+  help          Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help     Print help information
-  -V, --version  Print version information  
+  -V, --version  Print version information
 ```
 
 To further look up specific commands, you can run `--help` for each command.
