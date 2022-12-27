@@ -23,7 +23,7 @@ pub fn voxelwise_tsnr(image_data: Array<f32, IxDyn>) -> Array<f32, IxDyn> {
     let std_img = image_data.std_axis(Axis(3), 1.);
     
     info!("Calculating tSNR...");
-    let tsnr_img = mean_img / std_img;
+    
         
-    tsnr_img
+    mean_img / std_img
 }

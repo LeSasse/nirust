@@ -41,7 +41,7 @@ pub fn save_img(
 ) {
     
     match WriterOptions::new(path)
-        .reference_header(&header)
+        .reference_header(header)
         .write_nifti(&image_data) {
             Ok(()) => {}
             Err(e) => {panic!("Error: {}", e)}
@@ -78,8 +78,8 @@ pub fn coord_transform(
     let world_y: f32 = *world_coords.slice(s![1, 0]).into_scalar();
     let world_z: f32 = *world_coords.slice(s![2, 0]).into_scalar();
     
-    let res = (world_x, world_y, world_z);
-    res
+    
+    (world_x, world_y, world_z)
     
 }
 

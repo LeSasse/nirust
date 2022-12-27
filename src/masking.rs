@@ -13,7 +13,7 @@ use crate::image::{get_affine, coord_transform};
 fn _find_x_origin(n_x: i32, affine: &Array2<f32>) -> f32 {
    for x_i in 0..n_x {
         let x_i = x_i as f32;
-        let (x_coord, _, _) = coord_transform(x_i, 0., 0., &affine);
+        let (x_coord, _, _) = coord_transform(x_i, 0., 0., affine);
         if x_coord < 0. {
             continue;
         } else {
@@ -21,8 +21,8 @@ fn _find_x_origin(n_x: i32, affine: &Array2<f32>) -> f32 {
         }
     }
     warn!("No origin for x could be found! Returning the highest index...");
-    let res = n_x as f32;
-    return res
+    
+    n_x as f32
 }
 
 pub fn mask_hemi (
@@ -33,7 +33,7 @@ pub fn mask_hemi (
 
     let dims = image_data.shape();
     let n_dims = dims.len();
-    let affine = get_affine(&header);    
+    let affine = get_affine(header);    
     // how many slices are there in the x direction?
     let n_x = dims[0] as i32;
     // left of origin (i.e. negative real-world coordinates are 'left')

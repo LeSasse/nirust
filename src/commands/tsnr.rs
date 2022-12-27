@@ -21,9 +21,9 @@ pub struct TemporalSNRCommand {
 
 impl ExecutableCommand for TemporalSNRCommand {
     fn execute(&self) {
-        let (header, image_data) = load_img(&Path::new(&self.input_nifti));
+        let (header, image_data) = load_img(Path::new(&self.input_nifti));
         let image_data = voxelwise_tsnr(image_data);
         info!("Saving tSNR NIfTI image at {}", self.output_nifti);
-        save_img(&Path::new(&self.output_nifti), &header, image_data);
+        save_img(Path::new(&self.output_nifti), &header, image_data);
     }
 }

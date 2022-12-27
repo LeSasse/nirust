@@ -14,7 +14,7 @@ pub mod commands {
 
 // rust or third party modules
 use clap::Parser;
-use simple_logger;
+
 use log::info;
 
 
