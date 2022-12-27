@@ -42,10 +42,7 @@ pub fn mask_hemi(
     info!("image dimensions are {:?}", &dims);
 
     let x_origin = x_origin as i32;
-    
-    // this is not efficient, but I do not want to do inplace operations with
-    // user provided data
-    
+        
     // Slice according to side parameter and n of dimensions
     // TODO: This feels like code duplication and unnecessary ifs,
     // but not sure how to do this better using rust + ndarray
