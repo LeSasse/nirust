@@ -1,6 +1,6 @@
 
 use ndarray::prelude::*;
-
+use itertools::iproduct;
 use nifti::{
     IntoNdArray,
     NiftiObject,
@@ -11,7 +11,7 @@ use nifti::{
 };
 
 use std::path::Path;
-use log::info;
+use log::{info, warn};
 
 
 pub fn load_img(
@@ -39,7 +39,10 @@ pub fn save_img(
     header: &NiftiHeader,
     image_data: Array<f32, IxDyn>
 ) {
-    
+    if path.exists() {
+        warn!("{:?} exists, overwriting image!", path);
+    }
+    info!("Saving image at {:?}", path);
     match WriterOptions::new(path)
         .reference_header(header)
         .write_nifti(&image_data) {
@@ -83,3 +86,48 @@ pub fn coord_transform(
     
 }
 
+
+pub fn resample_3d_nifti(
+    source: &Array<f32, Ix3>,
+    source_affine: &Array2<f32>,
+    target_affine: &Array2<f32>,
+    target_shape: (usize, usize, usize)
+) -> Array<f32, Ix3> {
+
+    let mut resampled_data = Array::zeros(target_shape);
+
+    let (dim_x, dim_y, dim_z) = target_shape;
+    let mut counter = 0;
+    for (i, j, k) in iproduct!(0..dim_x, 0..dim_y, 0..dim_z) {
+        counter += 1;
+        let (x_target, y_target, z_target) = coord_transform(
+            i as f32,
+            j as f32,
+            k as f32,
+            target_affine,
+        );  
+        
+        for (i_src, j_src, k_src) in iproduct!() { 
+            let (x_src, y_src, z_src) = coord_transform(
+                i_src as f32,
+                j_src as f32,
+                k_src as f32,
+                source_affine
+            );
+        }
+        println!("point {} {} {}", x_target, y_target, z_target);
+    }
+    println!("{} counter", counter);
+    
+    resampled_data
+}
+
+
+fn euclidean_distance(
+    point_a: (f32, f32, f32), point_b: (f32, f32, f32)
+) -> f32 {
+    let (a_x, a_y, a_z) = point_a;
+    let (b_x, b_y, b_z) = point_b;
+    
+    0.5
+}

@@ -23,13 +23,13 @@ pub struct MaskHemiCommand {
 impl ExecutableCommand for MaskHemiCommand { 
     fn execute(&self) {
         
+        info!("Running mask-hemi command...");        
         match self.side.as_str() {
             "left" => info!("Masking left hemisphere..."),
             "right" => info!("Masking right hemisphere ..."),
             _ => panic!("Error: 'side' parameter can be 'left' or 'right'!")
         }
 
-        info!("Running mask-hemi command...");        
         // function that loads image and returns header and ndarray
         let (header, mut image_data) = load_img(Path::new(&self.input_nifti));
                 
