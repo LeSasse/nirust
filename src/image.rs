@@ -1,4 +1,7 @@
 
+use smartcore::neighbors::knn_classifier::*;
+//use smartcore::math::distance::*;
+
 use ndarray::prelude::*;
 use itertools::iproduct;
 use nifti::{
@@ -94,40 +97,107 @@ pub fn resample_3d_nifti(
     target_shape: (usize, usize, usize)
 ) -> Array<f32, Ix3> {
 
-    let mut resampled_data = Array::zeros(target_shape);
-
-    let (dim_x, dim_y, dim_z) = target_shape;
-    let mut counter = 0;
-    for (i, j, k) in iproduct!(0..dim_x, 0..dim_y, 0..dim_z) {
-        counter += 1;
-        let (x_target, y_target, z_target) = coord_transform(
-            i as f32,
-            j as f32,
-            k as f32,
-            target_affine,
-        );  
-        
-        for (i_src, j_src, k_src) in iproduct!() { 
-            let (x_src, y_src, z_src) = coord_transform(
-                i_src as f32,
-                j_src as f32,
-                k_src as f32,
-                source_affine
-            );
-        }
-        println!("point {} {} {}", x_target, y_target, z_target);
-    }
-    println!("{} counter", counter);
+    // The idea of resampling is to generate an empty array with the 
+    // "new, correct" shape, and interpolate the values in this array using 
+    // the source array to "resample/interpolate"
+    let mut resampled_data: Array<f32, Ix3> = Array::zeros(target_shape);
     
-    resampled_data
+    let x_dim_src = source.shape()[0];       
+    let y_dim_src = source.shape()[1];    
+    let z_dim_src = source.shape()[2];        
+
+    // transform coords from source
+    let n_elem_src = x_dim_src * y_dim_src * z_dim_src;
+    let mut labels_source: Vec<i32> = Vec::new();
+    let mut coords_source = Array::zeros((n_elem_src, 3));
+    for (row, ((i, j, k), value)) in source.indexed_iter().enumerate() {
+        let (x, y, z) = coord_transform(
+            i as f32, j as f32, k as f32, source_affine
+        );
+        coords_source.slice_mut(s![row, 0]).fill(x);
+        coords_source.slice_mut(s![row, 1]).fill(y);
+        coords_source.slice_mut(s![row, 2]).fill(z);
+        labels_source.push(*value as i32);
+    }
+
+    // transform coords for reference
+    let n_elem_targ = target_shape.0 * target_shape.1 * target_shape.2;
+    let mut coords_target = Array::zeros((n_elem_targ, 3));
+    for (row, (i, j, k)) in iproduct!(
+        0..resampled_data.shape()[0],
+        0..resampled_data.shape()[1],
+        0..resampled_data.shape()[2]
+    ).enumerate() {    
+        let (x, y, z) = coord_transform(
+            i as f32, j as f32, k as f32, target_affine
+        );
+        coords_target.slice_mut(s![row, 0]).fill(x);
+        coords_target.slice_mut(s![row, 1]).fill(y);
+        coords_target.slice_mut(s![row, 2]).fill(z);
+    }
+    
+    let knn = KNNClassifier::fit(
+        &coords_source, &labels_source, Default::default()
+    ).unwrap();
+    
+    let y_hat = knn.predict(&coords_target).unwrap();    
+    println!("{:?}", &y_hat);    
+    println!("{:?}", &y_hat.len());    
+    // println!("{:?}", labels_source);
+        
+    // }
+    
+    // let tree = KdTree::new(coords_source);
+    
+    // // get the nearest neighbours
+    // for row in coords_target.axis_iter(Axis(0)) {
+    //     let (neighbour_index, _) = tree.nearest(&row);
+    //     println!("{:?}", neighbour_index);
+    // }
+    
+    return resampled_data            
 }
+    // for (i, j, k) in iproduct!(
+    //     0..resampled_data.shape()[0],
+    //     0..resampled_data.shape()[1],
+    //     0..resampled_data.shape()[2]
+    // ) {
+        
+    //     let coord_target = coord_transform(
+    //         i as f32, j as f32, k as f32, target_affine
+    //     );
+        
+    //     let mut min: Option<f32> = None;
+    //     let mut val_nneigh: Option<f32> = None;
+    //     // find nearest neighbour and corresponding value
+    //     for ((i_src, j_src, k_src), value) in source.indexed_iter() {
+    //         let coord_source = coord_transform(
+    //             i_src as f32, j_src as f32, k_src as f32, source_affine
+    //         );
+    //         let x = euclidean_distance(&coord_target, &coord_source);
+    //         if let Some(current_min) = min {
+    //             if x < current_min {
+    //                 min = Some(x);
+    //                 val_nneigh = Some(*value)
+    //             }
+    //         } else {
+    //             min = Some(x);
+    //             val_nneigh = Some(*value);
+    //         }
+    //     }
+    //     let min = min.unwrap();
+    //     let val_nneigh = val_nneigh.unwrap();
+        
+    //     resampled_data.slice_mut(s![i, j, k]).fill(val_nneigh);
+    // }
+    
 
 
 fn euclidean_distance(
-    point_a: (f32, f32, f32), point_b: (f32, f32, f32)
+    point_a: &(f32, f32, f32), point_b: &(f32, f32, f32)
 ) -> f32 {
     let (a_x, a_y, a_z) = point_a;
     let (b_x, b_y, b_z) = point_b;
     
-    0.5
+    ((a_x - b_x).powi(2) + (a_y - b_y).powi(2) + (a_z - b_z).powi(2)).sqrt()
 }

@@ -13,6 +13,7 @@ log = { version = "0.4", features = ["kv_unstable"]}
 simple_logger = "4.0.0"
 clap = { version = "4.0.29", features = ["derive"]}
 itertools = "0.10.5"
+smartcore = { version = "0.3.0", features = ["ndarray-bindings"]}
 
 [profile.release]
 debug = true
