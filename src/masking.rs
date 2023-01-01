@@ -26,7 +26,7 @@ pub fn parcellate(
     let k = parc_shape[2];
         
     if (i, j, k) != (x, y, z) {
-        warn!("Image and parcellation have different spatial dimensions. Resampling parcellation to image...");
+        warn!("Image and parcellation have different spatial shape. Resampling parcellation to image...");
         
         let image_affine = get_affine(image_header);
         let parc_affine = get_affine(parcellation_header);
@@ -144,10 +144,7 @@ fn _parcellate_4d(
         
     let n_rois = _find_max_val(parcellation_data) as i32;    
     info!("{} ROIs detected in parcellation!", n_rois);
-    
-    println!("{:?} image shape", image_data.shape());
-    println!("{:?} parc shape", parcellation_data.shape());
-    
+        
     let time_dim = image_data.shape()[3] as usize;
     let mut mean_timeseries = Array::<f32, Ix2>::zeros(
         (time_dim, n_rois as usize)
