@@ -20,14 +20,19 @@ Nirust consists of a collection of commands, which you can look up by running
 `nirust --help`.
 
 ```
-Usage: nirust <COMMAND>
+A collection of command line utilities for neuroimaging
+
+Usage: nirust [OPTIONS] <COMMAND>
 
 Commands:
-  mask-hemi     Mask the left or right hemisphere of a NIfTI image
-  temporal-snr  Compute the voxel-wise temporal SNR of a 4D NIfTI image
-  help          Print this message or the help of the given subcommand(s)
+  mask-hemi          Mask the left or right hemisphere of a NIfTI image
+  temporal-snr       Compute the voxel-wise temporal SNR of a 4D NIfTI image
+  parcellate         Parcellate a 3D or 4D NIfTI image
+  resample-to-image  Resample a 3D NIfTI image to another 3D or 4D reference image using nearest neighbour interpolation
+  help               Print this message or the help of the given subcommand(s)
 
 Options:
+  -v, --verbose  Whether to run verbose
   -h, --help     Print help information
   -V, --version  Print version information
 ```
