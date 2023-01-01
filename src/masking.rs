@@ -2,11 +2,8 @@
 use std::option::Option::Some;
 use ndarray::prelude::*;
 use nifti::NiftiHeader;
-use std::f32::{NAN, MIN};
+use std::f32::NAN;
 use log::{info, warn};
-use itertools::iproduct;
-
-use std::time::{Duration, Instant};
 
 use crate::image::{get_affine, coord_transform, resample_3d_nifti};
 
@@ -16,7 +13,7 @@ pub fn parcellate(
     image_header: &NiftiHeader,
     parcellation_data: &Array<f32, Ix3>,
     parcellation_header: &NiftiHeader,
-) {//-> Array<f32, IxDyn>  {
+) -> Array<f32, IxDyn>  {
     let img_shape = image_data.shape();
     let parc_shape = parcellation_data.shape();
     
@@ -27,31 +24,24 @@ pub fn parcellate(
     let i = parc_shape[0];
     let j = parc_shape[1];
     let k = parc_shape[2];
-    
-    let dims = img_shape.len();
-    info!("Image to parcellate has {} dimensions.", dims);
-    
+        
     if (i, j, k) != (x, y, z) {
         warn!("Image and parcellation have different spatial dimensions. Resampling parcellation to image...");
         
         let image_affine = get_affine(image_header);
         let parc_affine = get_affine(parcellation_header);
-        let parcellation_data = resample_3d_nifti(
-            &parcellation_data,
+        let parcellation_data_resampled = resample_3d_nifti(
+            parcellation_data,
             &parc_affine,
             &image_affine,
             (x, y, z)
         );
+        parcellate_any(image_data, &parcellation_data_resampled)
+    } else {
+        parcellate_any(image_data, parcellation_data)
     }
-            
-    // if dims == 3 {
-    //     return _parcellate_3D(&image_data, &parcellation_data).into_dyn();    
-    // } else if dims == 4 {
-    //     return _parcellate_4D(&image_data, &parcellation_data);    
-    // } else {
-    //     panic!("Not a 3D or 4D image!");
-    // }
 }
+
 
 pub fn mask_hemi(
     header: &NiftiHeader,
@@ -74,32 +64,63 @@ pub fn mask_hemi(
     // TODO: This feels like code duplication and unnecessary ifs,
     // but not sure how to do this better using rust + ndarray
     // one possible nicer solution: change to "match" statement
-    if side == "left" {
-        if n_dims == 3 {
-            image_data.slice_mut(s![0..x_origin, .., ..]).fill(NAN);
-        } else if n_dims == 4 {
-            image_data.slice_mut(s![0..x_origin, .., .., ..]).fill(NAN);
-        }
-    } else if side == "right" {   
-        if n_dims == 3 {
-            image_data.slice_mut(s![x_origin..n_x, .., ..]).fill(NAN);
-        } else if n_dims == 4 {
-            image_data.slice_mut(s![x_origin..n_x, .., .., ..]).fill(NAN);
-        }
-    } else {
-        panic!("Error: 'side' parameter can be 'left' or 'right'!");
+    
+    match (side, n_dims) {
+        ("left", 3) => image_data
+            .slice_mut(s![0..x_origin, .., ..])
+            .fill(NAN),
+        ("left", 4) => image_data
+            .slice_mut(s![0..x_origin, .., .., ..])
+            .fill(NAN),
+        ("right", 3) => image_data
+            .slice_mut(s![x_origin..n_x, .., ..])
+            .fill(NAN),
+        ("right", 4) => image_data
+            .slice_mut(s![x_origin..n_x, .., .., ..])
+            .fill(NAN),
+        _ => panic!("Error: 'side' parameter can be 'left' or 'right'!")
     }
-    info!("Done masking the {} side of the image!", side);
+    // if side == "left" {
+    //     if n_dims == 3 {
+    //         image_data.slice_mut(s![0..x_origin, .., ..]).fill(NAN);
+    //     } else if n_dims == 4 {
+    //         image_data.slice_mut(s![0..x_origin, .., .., ..]).fill(NAN);
+    //     }
+    // } else if side == "right" {   
+    //     if n_dims == 3 {
+    //         image_data.slice_mut(s![x_origin..n_x, .., ..]).fill(NAN);
+    //     } else if n_dims == 4 {
+    //         image_data.slice_mut(s![x_origin..n_x, .., .., ..]).fill(NAN);
+    //     }
+    // } else {
+    //     panic!("Error: 'side' parameter can be 'left' or 'right'!");
+    // }
+    // info!("Done masking the {} side of the image!", side);
 }
 
 
-fn _parcellate_3D(
+fn parcellate_any(
+    image_data: &Array<f32, IxDyn>, parcellation_data: &Array<f32, Ix3>,
+) -> Array<f32, IxDyn> {
+    let dims = image_data.shape().len();
+    info!("Image to parcellate has {} dimensions.", dims);
+    if dims == 3 {
+        _parcellate_3d(image_data, parcellation_data).into_dyn()    
+    } else if dims == 4 {
+        _parcellate_4d(image_data, parcellation_data).into_dyn()    
+    } else {
+        panic!("Not a 3D or 4D image!");
+    }
+}
+
+
+fn _parcellate_3d(
     image_data: &Array<f32, IxDyn>,
     parcellation_data: &Array<f32, Ix3>,
 ) -> Array<f32, Ix1> {
 
         
-    let n_rois = _find_max_val(&parcellation_data) as i32;    
+    let n_rois = _find_max_val(parcellation_data) as i32;    
     info!("{} ROIs detected in parcellation!", n_rois);
     let mut means_rois = Array::<f32, Ix1>::zeros(n_rois as usize);
     for roi in 1..=n_rois {
@@ -116,12 +137,12 @@ fn _parcellate_3D(
     means_rois
 }
 
-fn _parcellate_4D(
+fn _parcellate_4d(
     image_data: &Array<f32, IxDyn>,
     parcellation_data: &Array<f32, Ix3>,
-) -> Array::<f32, IxDyn> {
+) -> Array::<f32, Ix2> {
         
-    let n_rois = _find_max_val(&parcellation_data) as i32;    
+    let n_rois = _find_max_val(parcellation_data) as i32;    
     info!("{} ROIs detected in parcellation!", n_rois);
     
     println!("{:?} image shape", image_data.shape());
@@ -140,20 +161,16 @@ fn _parcellate_4D(
         for ((i, j, k), parc_val) in parcellation_data.indexed_iter() {
             
             if *parc_val == roi as f32 {
-                vox_counter += 1.;
-                //println!("{:?}", image_data.slice(s![i, j, k, ..]).shape());
-                //println!("{:?}", mean_timeseries_roi.shape());
-                
-                //mean_timeseries_roi = mean_timeseries_roi + image_data.slice(
-                //    s![i, j, k, ..]
-                //);
+                vox_counter += 1.;                
+                mean_timeseries_roi = mean_timeseries_roi + image_data.slice(
+                    s![i, j, k, ..]
+                );
             }
         }
-        //mean_timeseries_roi = mean_timeseries_roi / vox_counter;
-        //mean_timeseries.slice_mut(s![.., roi-1]);
+        mean_timeseries_roi /= vox_counter;
+        mean_timeseries.slice_mut(s![.., roi-1]).assign(&mean_timeseries_roi);
     }
-    println!("{:?}", mean_timeseries);
-    mean_timeseries.into_dyn()
+    mean_timeseries
 }
 
 

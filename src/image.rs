@@ -31,7 +31,6 @@ pub fn load_img(
     let dims = volume.dim();
     let n_dims = dims.len();
     info!("Dimensions detected: {:?}", n_dims);
-    info!("Consuming data...");
     let image_data = img.into_volume().into_ndarray::<f32>().unwrap();
 
     (header, image_data)
@@ -66,8 +65,7 @@ pub fn get_affine(header: &NiftiHeader) -> Array2<f32> {
     )
 }
 
-// Function to transform voxel coordinates into real-world coordinates
-// TODO: Refactor so that x, y, z can be individual arrays as well
+
 pub fn coord_transform(
     x: f32,
     y: f32,
@@ -136,68 +134,21 @@ pub fn resample_3d_nifti(
         coords_target.slice_mut(s![row, 2]).fill(z);
     }
     
+    // fit on the source image and predict values of target array based
+    // on euclidean distance between coordinates
     let knn = KNNClassifier::fit(
         &coords_source, &labels_source, Default::default()
     ).unwrap();
     
     let y_hat = knn.predict(&coords_target).unwrap();    
-    println!("{:?}", &y_hat);    
-    println!("{:?}", &y_hat.len());    
-    // println!("{:?}", labels_source);
-        
-    // }
     
-    // let tree = KdTree::new(coords_source);
-    
-    // // get the nearest neighbours
-    // for row in coords_target.axis_iter(Axis(0)) {
-    //     let (neighbour_index, _) = tree.nearest(&row);
-    //     println!("{:?}", neighbour_index);
-    // }
-    
-    return resampled_data            
-}
-    // for (i, j, k) in iproduct!(
-    //     0..resampled_data.shape()[0],
-    //     0..resampled_data.shape()[1],
-    //     0..resampled_data.shape()[2]
-    // ) {
-        
-    //     let coord_target = coord_transform(
-    //         i as f32, j as f32, k as f32, target_affine
-    //     );
-        
-    //     let mut min: Option<f32> = None;
-    //     let mut val_nneigh: Option<f32> = None;
-    //     // find nearest neighbour and corresponding value
-    //     for ((i_src, j_src, k_src), value) in source.indexed_iter() {
-    //         let coord_source = coord_transform(
-    //             i_src as f32, j_src as f32, k_src as f32, source_affine
-    //         );
-    //         let x = euclidean_distance(&coord_target, &coord_source);
-    //         if let Some(current_min) = min {
-    //             if x < current_min {
-    //                 min = Some(x);
-    //                 val_nneigh = Some(*value)
-    //             }
-    //         } else {
-    //             min = Some(x);
-    //             val_nneigh = Some(*value);
-    //         }
-    //     }
-    //     let min = min.unwrap();
-    //     let val_nneigh = val_nneigh.unwrap();
-        
-    //     resampled_data.slice_mut(s![i, j, k]).fill(val_nneigh);
-    // }
-    
-
-
-fn euclidean_distance(
-    point_a: &(f32, f32, f32), point_b: &(f32, f32, f32)
-) -> f32 {
-    let (a_x, a_y, a_z) = point_a;
-    let (b_x, b_y, b_z) = point_b;
-    
-    ((a_x - b_x).powi(2) + (a_y - b_y).powi(2) + (a_z - b_z).powi(2)).sqrt()
+    // fill values back into the resampled data array    
+    for (row, (i, j, k)) in iproduct!(
+        0..resampled_data.shape()[0],
+        0..resampled_data.shape()[1],
+        0..resampled_data.shape()[2]
+    ).enumerate() {    
+        resampled_data.slice_mut(s![i, j, k]).fill(y_hat[row] as f32)
+    }
+    resampled_data
 }
