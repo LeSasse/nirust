@@ -5,7 +5,7 @@ use ndarray::prelude::*;
 use std::path::Path;
 
 use crate::{
-    image::{load_img, save_img, get_affine, resample_3d_nifti},
+    image::{get_affine, load_img, resample_3d_nifti, save_img},
     masking::{mask_hemi, parcellate},
     statistics::voxelwise_tsnr,
 };
@@ -42,10 +42,10 @@ pub enum ActionType {
 
     /// Parcellate a 3D or 4D NIfTI image.
     Parcellate(ParcellateCommand),
-    
-    /// Resample a 3D NIfTI image to another 3D or 4D reference image 
+
+    /// Resample a 3D NIfTI image to another 3D or 4D reference image
     /// using nearest neighbour interpolation.
-    ResampleToImage(ResampleToImageCommand), 
+    ResampleToImage(ResampleToImageCommand),
 }
 
 #[derive(Debug, Args)]
@@ -121,11 +121,15 @@ impl ExecutableCommand for ParcellateCommand {
         let parc_data_shaped: Array<f32, Ix3> =
             parc_data.into_shape(shape).unwrap();
 
-        parcellate(&image_data, &header_img, &parc_data_shaped, &header_parc);
-        //println!("{:?}", parcellated.shape());
+        let parcellated = parcellate(
+            &image_data,
+            &header_img,
+            &parc_data_shaped,
+            &header_parc,
+        );
+        println!("{:?}", parcellated);
     }
 }
-
 
 #[derive(Debug, Args)]
 pub struct ResampleToImageCommand {
@@ -143,19 +147,19 @@ impl ExecutableCommand for ResampleToImageCommand {
         let ref_nifti = Path::new(&self.reference_nifti);
         let (header, image_data) = load_img(input_nifti);
         let (ref_header, ref_image) = load_img(ref_nifti);
-        
-        let i = image_data.shape()[0];        
+
+        let i = image_data.shape()[0];
         let j = image_data.shape()[1];
         let k = image_data.shape()[2];
-        
+
         let image_data_shaped: Array<f32, Ix3> =
             image_data.into_shape((i, j, k)).unwrap();
-        
+
         let target_shape = ref_image.shape();
         let x = target_shape[0];
         let y = target_shape[1];
         let z = target_shape[2];
-        
+
         let image_affine = get_affine(&header);
         let ref_affine = get_affine(&ref_header);
         let data_resampled = resample_3d_nifti(
@@ -167,7 +171,7 @@ impl ExecutableCommand for ResampleToImageCommand {
         save_img(
             Path::new(&self.output_nifti),
             &ref_header,
-            data_resampled.into_dyn()
+            data_resampled.into_dyn(),
         );
     }
 }

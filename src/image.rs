@@ -1,8 +1,9 @@
-use smartcore::neighbors::knn_classifier::*;
+// use smartcore::neighbors::knn_classifier::*;
 //use smartcore::math::distance::*;
 
 use itertools::iproduct;
 use ndarray::prelude::*;
+use ndarray_linalg::solve::Inverse;
 use nifti::{
     writer::WriterOptions, IntoNdArray, NiftiHeader, NiftiObject, NiftiVolume,
     ReaderOptions,
@@ -74,6 +75,26 @@ pub fn coord_transform(
     (world_x, world_y, world_z)
 }
 
+pub fn inv_coord_transform(
+    x: f32,
+    y: f32,
+    z: f32,
+    affine: &Array2<f32>,
+) -> (f32, f32, f32) {
+    let aff_inv = affine.inv().unwrap();
+
+    let world_coords = arr2(&[[x], [y], [z], [1.]]);
+    let voxel_coords = aff_inv.dot(&world_coords);
+    //(voxel_coords[0], voxel_coords[1], voxel_coords[2])
+    //info!("{:?}", voxel_coords);
+
+    let voxel_x: f32 = *voxel_coords.slice(s![0, 0]).into_scalar();
+    let voxel_y: f32 = *voxel_coords.slice(s![1, 0]).into_scalar();
+    let voxel_z: f32 = *voxel_coords.slice(s![2, 0]).into_scalar();
+
+    (voxel_x, voxel_y, voxel_z)
+}
+
 pub fn resample_3d_nifti(
     source: &Array<f32, Ix3>,
     source_affine: &Array2<f32>,
@@ -89,55 +110,51 @@ pub fn resample_3d_nifti(
     let y_dim_src = source.shape()[1];
     let z_dim_src = source.shape()[2];
 
-    // transform coords from source
-    let n_elem_src = x_dim_src * y_dim_src * z_dim_src;
-    let mut labels_source: Vec<i32> = Vec::new();
-    let mut coords_source = Array::zeros((n_elem_src, 3));
-    for (row, ((i, j, k), value)) in source.indexed_iter().enumerate() {
-        let (x, y, z) =
-            coord_transform(i as f32, j as f32, k as f32, source_affine);
-        coords_source.slice_mut(s![row, 0]).fill(x);
-        coords_source.slice_mut(s![row, 1]).fill(y);
-        coords_source.slice_mut(s![row, 2]).fill(z);
-        labels_source.push(*value as i32);
-    }
+    let x_dim_targ = resampled_data.shape()[0];
+    let y_dim_targ = resampled_data.shape()[1];
+    let z_dim_targ = resampled_data.shape()[2];
 
     // transform coords for reference
-    let n_elem_targ = target_shape.0 * target_shape.1 * target_shape.2;
-    let mut coords_target = Array::zeros((n_elem_targ, 3));
-    for (row, (i, j, k)) in iproduct!(
-        0..resampled_data.shape()[0],
-        0..resampled_data.shape()[1],
-        0..resampled_data.shape()[2]
-    )
-    .enumerate()
+    let mut target_indices = Array::zeros((4, resampled_data.len()));
+    for (row, (i, j, k)) in
+        iproduct!(0..x_dim_targ, 0..y_dim_targ, 0..z_dim_targ).enumerate()
     {
-        let (x, y, z) =
-            coord_transform(i as f32, j as f32, k as f32, target_affine);
-        coords_target.slice_mut(s![row, 0]).fill(x);
-        coords_target.slice_mut(s![row, 1]).fill(y);
-        coords_target.slice_mut(s![row, 2]).fill(z);
+        target_indices
+            .slice_mut(s![.., row])
+            .assign(&array!(i as f32, j as f32, k as f32, 1.));
     }
+    let source_coords = target_affine.dot(&target_indices);
 
-    // fit on the source image and predict values of target array based
-    // on euclidean distance between coordinates
-    let knn =
-        KNNClassifier::fit(&coords_source, &labels_source, Default::default())
-            .unwrap();
+    let source_indices = source_affine.inv().unwrap().dot(&source_coords);
 
-    let y_hat = knn.predict(&coords_target).unwrap();
-
-    // fill values back into the resampled data array
-    for (row, (i, j, k)) in iproduct!(
-        0..resampled_data.shape()[0],
-        0..resampled_data.shape()[1],
-        0..resampled_data.shape()[2]
-    )
-    .enumerate()
+    for (col_src, col_targ) in source_indices
+        .axis_iter(Axis(1))
+        .zip(target_indices.axis_iter(Axis(1)))
     {
+        let i_src = _handle_index_format(&col_src[0], &x_dim_src);
+        let j_src = _handle_index_format(&col_src[1], &y_dim_src);
+        let k_src = _handle_index_format(&col_src[2], &z_dim_src);
+
+        let i_targ = _handle_index_format(&col_targ[0], &x_dim_targ);
+        let j_targ = _handle_index_format(&col_targ[1], &y_dim_targ);
+        let k_targ = _handle_index_format(&col_targ[2], &z_dim_targ);
+
         resampled_data
-            .slice_mut(s![i, j, k])
-            .fill(y_hat[row] as f32)
+            .slice_mut(s![i_targ, j_targ, k_targ])
+            .assign(&source.slice(s![i_src, j_src, k_src]));
     }
+
     resampled_data
+}
+
+fn _handle_index_format(x: &f32, x_max: &usize) -> i32 {
+    let x_max_as_i = *x_max as i32;
+    let x_as_i = *x as i32;
+    if x_as_i < 0 {
+        0
+    } else if x_as_i >= x_max_as_i {
+        x_max_as_i - 1
+    } else {
+        x_as_i
+    }
 }
