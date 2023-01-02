@@ -1,6 +1,3 @@
-// use smartcore::neighbors::knn_classifier::*;
-//use smartcore::math::distance::*;
-
 use itertools::iproduct;
 use ndarray::prelude::*;
 use ndarray_linalg::solve::Inverse;
@@ -65,34 +62,12 @@ pub fn coord_transform(
 ) -> (f32, f32, f32) {
     let voxel_coords = arr2(&[[x], [y], [z], [1.]]);
     let world_coords = affine.dot(&voxel_coords);
-    //(world_coords[0], world_coords[1], world_coords[2])
-    //info!("{:?}", world_coords);
 
     let world_x: f32 = *world_coords.slice(s![0, 0]).into_scalar();
     let world_y: f32 = *world_coords.slice(s![1, 0]).into_scalar();
     let world_z: f32 = *world_coords.slice(s![2, 0]).into_scalar();
 
     (world_x, world_y, world_z)
-}
-
-pub fn inv_coord_transform(
-    x: f32,
-    y: f32,
-    z: f32,
-    affine: &Array2<f32>,
-) -> (f32, f32, f32) {
-    let aff_inv = affine.inv().unwrap();
-
-    let world_coords = arr2(&[[x], [y], [z], [1.]]);
-    let voxel_coords = aff_inv.dot(&world_coords);
-    //(voxel_coords[0], voxel_coords[1], voxel_coords[2])
-    //info!("{:?}", voxel_coords);
-
-    let voxel_x: f32 = *voxel_coords.slice(s![0, 0]).into_scalar();
-    let voxel_y: f32 = *voxel_coords.slice(s![1, 0]).into_scalar();
-    let voxel_z: f32 = *voxel_coords.slice(s![2, 0]).into_scalar();
-
-    (voxel_x, voxel_y, voxel_z)
 }
 
 pub fn resample_3d_nifti(
