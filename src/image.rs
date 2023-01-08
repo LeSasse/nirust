@@ -14,6 +14,16 @@ use nifti::{
 use log::{info, warn};
 use std::path::Path;
 
+/// Load a 3D or 4D NIfTI image.
+///
+/// The function loads the image into memory and returns a tuple containing
+/// the header with the image metadata, and an ndarray with the voxel-wise
+/// image data.
+/// 
+/// Parameters
+/// ----------
+/// path : Path to the NIfTI image
+///
 pub fn load_img(path: &Path) -> (NiftiHeader, Array<f32, IxDyn>) {
     info!("Reading NIfTI at {:?}", path);
     let img = match ReaderOptions::new().read_file(path) {
@@ -30,6 +40,16 @@ pub fn load_img(path: &Path) -> (NiftiHeader, Array<f32, IxDyn>) {
     (header, image_data)
 }
 
+/// Save a 3D or 4D NIfTI image to disk.
+///
+/// Parameters
+/// ----------
+/// path : Path and filename of the data to be saved.
+///
+/// header : Header metadata for the NIfTI image to be stored.
+///
+/// image_data : ndarray containing the voxel-wise image data.
+///
 pub fn save_img(
     path: &Path,
     header: &NiftiHeader,
@@ -50,6 +70,21 @@ pub fn save_img(
     }
 }
 
+/// Extract the affine matrix from a NiftiHeader.
+/// 
+/// At the moment, the function only returns the sform affine. I need to still
+/// implement obtaining the qform or fall-back affines if appropriate.
+/// The function should eventually follow [the conventions outlined by the 
+/// Python-based nibabel library](https://nipy.org/nibabel/nifti_images.html#choosing-the-image-affine):
+///
+/// > 1. If sform_code != 0 (‘unknown’) use the sform affine; else
+/// > 2. If qform_code != 0 (‘unknown’) use the qform affine; else
+/// > 3. Use the fall-back affine.
+///
+/// Parameters
+/// ----------
+/// header : Header metadata for the NIfTI image to be stored.
+///
 pub fn get_affine(header: &NiftiHeader) -> Array2<f32> {
     arr2(&[
         header.srow_x,
