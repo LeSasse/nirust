@@ -94,6 +94,10 @@ pub fn get_affine(header: &NiftiHeader) -> Array2<f32> {
     ])
 }
 
+/// Convert voxel coordinates into "real-world" coordinates of the reference
+/// space. Practically, the function can also be used to transform the
+/// "real-world" coordinates into voxel coordinates by providing the inverse
+/// of the affine matrix.
 pub fn coord_transform(
     x: f32,
     y: f32,
@@ -110,15 +114,37 @@ pub fn coord_transform(
     (world_x, world_y, world_z)
 }
 
+/// Resample a 3D NIfTI image.
+/// The idea of resampling is to generate an empty array with the
+/// output shape, and interpolate the values in this array using
+/// the source array. That is, the voxel coordinates of the output array are
+/// converted to "real-world" coordinates in the reference space using the
+/// target affine. The inverse of the target affine can then be used to convert
+/// "real-world" coordinates into voxel-coordinates of the source array.
+/// For more info on coordinate systems and affines, see
+/// [the excellent nibabel documentation](https://nipy.org/nibabel/coordinate_systems.html).
+/// Currently, this function only uses "nearest-neighbour" interpolation, i.e.
+/// by simply using the source voxel coordinates to select the value from the
+/// source array and assigning it to the corresponding voxel coordinate in the
+/// target array.
+/// There are plans to add further interpolation techniques. 
+///
+/// Parameters
+/// ----------
+/// source : ndarray containing the data of the image that is to be resampled.
+///
+/// source_affine : affine matrix that belongs to the image to be resampled.
+///
+/// target_affine : affine matrix of the image that is to be matched.
+///
+/// target_shape : shape of the output array, i.e. the shape of the image after
+/// resampling.
 pub fn resample_3d_nifti(
     source: &Array<f32, Ix3>,
     source_affine: &Array2<f32>,
     target_affine: &Array2<f32>,
     target_shape: (usize, usize, usize),
 ) -> Array<f32, Ix3> {
-    // The idea of resampling is to generate an empty array with the
-    // "new, correct" shape, and interpolate the values in this array using
-    // the source array to "resample/interpolate"
     let mut resampled_data: Array<f32, Ix3> = Array::zeros(target_shape);
 
     let x_dim_src = source.shape()[0];
@@ -138,9 +164,11 @@ pub fn resample_3d_nifti(
             .slice_mut(s![.., row])
             .assign(&array!(i as f32, j as f32, k as f32, 1.));
     }
-    let source_coords = target_affine.dot(&target_indices);
-
-    let source_indices = source_affine.inv().unwrap().dot(&source_coords);
+    let source_indices = source_affine
+        .inv()
+        .unwrap()
+        .dot(target_affine)
+        .dot(&target_indices);
 
     for (col_src, col_targ) in source_indices
         .axis_iter(Axis(1))
