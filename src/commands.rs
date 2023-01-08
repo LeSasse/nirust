@@ -1,3 +1,8 @@
+//! All CLI commands are implemented in the `nirust::commands` module.
+//! Specifically, each command is implemented as a struct with fields
+//! corresponding to the arguments. Each command struct needs to implement the
+//! `execute` method.
+
 use clap::{Args, Parser, Subcommand};
 
 use log::info;

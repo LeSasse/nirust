@@ -1,6 +1,19 @@
+//! The `nirust::statistics` module provides functions that compute common
+//! statistics describing an image (for example computing the temporal
+//! signal-to-noise ratio using `voxelwise_tsnr`).
+
 use log::info;
 use ndarray::prelude::*;
 
+/// Compute the temporal signal-to-noise ratio for every voxel
+///
+/// The temporal signal-to-noise ratio is defined as the mean signal divided
+/// by the standard deviation of the signal.
+///
+/// Parameters
+/// ----------
+/// image_data : 4D ndarray containing the voxelwise image data, with the last
+/// dimension corresponding to the time dimension. 
 pub fn voxelwise_tsnr(image_data: Array<f32, IxDyn>) -> Array<f32, IxDyn> {
     let dims = image_data.shape();
     let n_dims = dims.len();

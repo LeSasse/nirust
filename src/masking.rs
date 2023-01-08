@@ -1,3 +1,7 @@
+//! The `nirust::masking` module implements functions relating to masking
+//! NIfTI images, either by applying binary masks or by applying parcellations
+//! with specific integer labels.
+
 use log::{info, warn};
 use ndarray::prelude::*;
 use nifti::NiftiHeader;
