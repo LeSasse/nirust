@@ -1,3 +1,8 @@
+//! The `nirust::image` module provides functions to read and write NIfTI
+//! images, access specific information from the header (for example, the
+//! affine matrix), and perform simple transformations of an image (for
+//! example resampling an image using `resample_3d_nifti`).
+
 use itertools::iproduct;
 use ndarray::prelude::*;
 use ndarray_linalg::solve::Inverse;

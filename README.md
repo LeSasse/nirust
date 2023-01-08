@@ -54,6 +54,46 @@ Options:
   -h, --help  Print help information
 ```
 
+# Try it out
+
+## Get some data
+
+If you don't have any neuroimaging data but still want to quickly try out nirust,
+you can get the data I use for testing and benchmarking performance and correctness
+of the implementations. To get the data and run some tests and the benchmarks,
+it is likely best to set up a python virtual environment and install necessary
+dependencies in there. Go to the benchmarks directory (`cd benchmarks`) and run:
+
+```sh
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+```
+
+To install necessary dependencies, run `pip install -r requirements.txt`.
+Then go to the dataprep directory (`cd dataprep`) and make sure `get_aomic_piop1_subject.sh`
+is executable, then run `./get_aomic_piop1_subject.sh`.
+
+## Example commands
+
+If you got the data as outlined above the following commands should work as they
+are, otherwise replace the file paths with whatever data you want to use.
+
+1. Calculate the voxel-wise temporal signal-to-noise ratio of a 4D NIfTI image: 
+```zsh
+nirust temporal-snr \
+  benchmarks/data/sub-0001_task-restingstate_acq-mb3_space-MNI152NLin2009cAsym_desc-preproc_bold.nii \
+  temporal_snr_image.nii.gz
+```
+
+2. Resample a parcellation to a lower-resolution 4D BOLD NIfTI image:
+```zsh
+nirust resample-to-image \
+  benchmarks/data/parcellations/schaefer_2018/Schaefer2018_100Parcels_7Networks_order_FSLMNI152_1mm.nii.gz \
+  benchmarks/data/sub-0001_task-restingstate_acq-mb3_space-MNI152NLin2009cAsym_desc-preproc_bold.nii \
+  resampled_parcellation.nii.gz
+```
+
 # Affine transformations
 
 Since NIfTI images give information for three different potential affines 
