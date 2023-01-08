@@ -53,3 +53,19 @@ Arguments:
 Options:
   -h, --help  Print help information
 ```
+
+# Affine transformations
+
+Since NIfTI images give information for three different potential affines 
+(sform, qform, and fall-back affine), whenever a function (for example resampling)
+requires affine transformations, the program will follow [the conventions outlined
+by the Python-based nibabel library](https://nipy.org/nibabel/nifti_images.html#choosing-the-image-affine):
+
+> 1. If sform_code != 0 (‘unknown’) use the sform affine; else
+> 2. If qform_code != 0 (‘unknown’) use the qform affine; else
+> 3. Use the fall-back affine.
+
+In general, nibabel has great documentation and some excellent tutorials [on the
+NIfTI file format and affine transformations](https://nipy.org/nibabel/tutorials.html).
+You can also refer to the [official NIfTI file specifications for more information](https://nifti.nimh.nih.gov/pub/dist/src/niftilib/nifti1.h).
+  
